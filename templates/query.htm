@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="x-ua-compatible" content="ie=edge">
+		<title>查询</title>
+		<meta name="description" content="搜索页面用于物流服务推荐系统">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href={{url_for('static', filename ='resources/newindex/css/bootstrap.min.css')}}>
+		<link rel="stylesheet" href={{url_for('static', filename ='resources/newindex/css/animate-text.css')}}>
+		<link rel="stylesheet" href={{url_for('static', filename ='resources/newindex/css/font-awesome.min.css')}}>
+		<!-- Ruby CSS -->
+		<link rel="stylesheet" href={{url_for('static', filename ='resources/newindex/style.css')}}>
+		<link rel="stylesheet" href={{url_for('static', filename ='resources/newindex/css/responsive.css')}}>
+
+		<script src={{url_for('static', filename ='resources/newindex/js/jquery.min.js')}}></script>
+		<script src={{url_for('static', filename ='resources/newindex/js/bootstrap.min.js')}}></script>
+		<!-- Color CSS -->
+		<link rel="stylesheet" href={{url_for('static', filename ='resources/newindex/css/color/color2.css')}}>
+		<link rel="stylesheet" href="#" id="colors">
+	</head>
+	<body>
+		<section id="slider">
+			<div class="single-slider" style="height:730px;">
+				<div id="particles-js">
+					<canvas class="particles-js-canvas-el" width="1088" height="812" style="width: 100%; height: 100%;"></canvas>
+				</div>
+				<div class="container">
+					<div class="row">
+						<div class="col-md-12">
+							<div class="text">
+								<h1 id="headline-small" style="display:none;font-size:20pt">
+									物流行业信息 
+									<span class="static cd-words-wrapper">智能推荐</span>
+								</h1>
+								<h1 id="headline" class="cd-headline clip is-full-width">                                
+									<span id="title">物流行业信息</span>
+									<span class="cd-words-wrapper" style="width: 51.2606px; overflow: hidden;">
+										<b class="is-visible">知识图谱</b>
+										<b class="is-hidden">智能推荐</b>                                           
+									</span>                                       
+								</h1>
+								<br>
+								<div id="main-form" class="form-inline col-md-12" role="form" style="color: white;">
+									<div class="form-group col-md-12 col-sm-12 col-xs-12" style="border:1px solid white; color: white;">
+										<label class="sr-only" for="mainentry"></label>
+										<input type="text" class="" id="mainentry" placeholder="杨浦区985高校" oninput="reset()" 
+												style="width: 100%;height:50px;background:rgba(0,0,0,0);outline: none;
+												-webkit-appearance:none;border-radius: 0;box-shadow:none;
+												border:0px none;color: withe;" 
+												onkeydown="if(event.keyCode==13){mainentrysubmit.click()}">
+										<button id="mainentrysubmit" style="height:100%;width:80px;background:rgba(0,0,0,0);
+													outline:none;-webkit-appearance:none;border-radius:0;
+													box-shadow:none;position:absolute;top:0;right:0;
+													border:0;color:white;" onclick="mainentry()">提交</button>
+									</div>
+											   
+									<div class="col-md-12 col-sm-12 col-xs-12 text-right example" style="margin-top:20px; font-size: 16px;">
+										<button style="color: white;border: 0; outline: none;background: rgba(0,0,0,0);"onclick="example()">
+											<i class="fa fa-list"></i> 查询示例</button>
+										<button style="color: white; padding: 0 ; margin-left: 10px; border: 0 ; outline: none;background: rgba(0,0,0,0);" onclick="">
+											<i class="fa fa-random"></i> 待定</button>
+									</div>                               
+									
+									<div class="button-head">
+										<div class="button"></div>
+									</div>
+												
+									<div id="response" style="display:none" class="jumbotron response">
+										<p style="margin:0px 0 35px 0;">
+											<button id="closeBtn" style=" float: right; background:rgba(0,0,0,0);outline:none; -webkit-appearance: none;
+												border-radius:0;box-shadow:none;border:0; color:gray;font-size:20px;" 
+												onclick="closeBtn()">
+												<img src={{url_for('static', filename ='resources/newindex/img/cross.png')}} style="width: 15px;height: 15px;">
+											</button>
+										</p>
+										<p class="intent">加载中，请稍候...</p>
+										<hr class="my-4">
+											<a class="target" href="#" role="button">请稍候...</a>
+									</div>
+												
+									<div id="response2" style="display:none;" class="jumbotron response">
+										<p style="margin:0px 0 35px 0;">
+											<button id="closeBtn" style="float: right; background:rgba(0,0,0,0);outline:none; -webkit-appearance: none;
+													border-radius:0;box-shadow:none;border:0; color:gray;font-size:20px;" onclick="closeBtn()">
+												<img src={{url_for('static', filename ='resources/newindex/img/cross.png')}} style="width: 15px;height: 15px;">
+											</button>
+										</p>
+										<div class="row">
+											<div class="eg col-md-12">
+												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">??</div>
+												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">??</div>
+												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">??</div>
+											</div>
+											<hr class="my-4 ">
+											<div class="eg col-md-12">
+												<div class=" col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">
+													<a class="target" href="#" style="padding: 0;margin: 0;">圆通快递</a>
+												</div>
+												<div class=" col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">
+													<a class="target" href="#" style="padding: 0;margin: 0;">?</a>
+												</div>
+												<div class=" col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">
+													<a class="target" href="#" style="padding: 0;margin: 0;">?</a>
+												</div>
+											</div>
+										</div>                                                                                  
+									</div>
+
+									<script>                               
+										function url() {
+											let exams = ['xx','bb'];
+											let index = Math.floor(Math.random() * exams.length);
+											window.location.href = exams[index];
+										};
+														
+										setInterval(function () {
+											let exams = ['顺丰', '圆通'];
+											let index = Math.floor(Math.random() * exams.length);
+											$('#mainentry').attr('placeholder', exams[index]);
+										}, 3000);
+											
+										$('.eg .target').on('click',function(e){
+											$('#mainentry').val(e.target.innerText);
+											$("#mainentrysubmit").click();
+										})
+											
+										function reset() {
+											$('#result').addClass('hidden');
+											$('#jumpsubmit').addClass('hidden');
+											$('#mainentrysubmit').removeClass('hidden');
+											$('.button span').removeClass('hidden');
+										}
+											
+										function mainentry() {
+											$('#response').removeClass('hidden');
+											$('#response .intent').text('加载中，请稍候...');
+											$('#response .btn').text('请稍候...');
+											$('#headline').slideUp('normal', function(){
+												$('#headline-small').fadeIn();
+											});
+												
+											$('#response').slideDown();
+											$('#response2').addClass('hidden');
+											let sen = $('#mainentry').val();
+											if (sen === '') sen = $('#mainentry').attr('placeholder');
+											$.ajax({
+												type: "get",
+												url: '/query',
+												data: { q: sen },
+												contentType: "application/json",
+												success: function (responseText, status) {
+													if (status === "success") {
+														
+														
+													
+														
+														$('#response .intent').text(responseText);
+													}
+												}
+											});
+										}
+										function example(){
+											$('#response2').removeClass('hidden');
+											$('#headline').slideUp('normal', function(){
+												$('#headline-small').fadeIn();
+											});
+											$('#response2').slideDown();
+											$('#response').addClass('hidden'); 
+										}
+										function closeBtn(){
+											$('#headline').slideUp('normal', function(){
+												$('#headline').fadeIn();
+												$('#headline-small').fadeOut();
+											});
+											$('#response').addClass('hidden');
+											$('#response2').addClass('hidden');
+											$('#mainentry').val('');
+										} 
+									</script>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<script src={{url_for('static', filename ='resources/newindex/js/animate-text.js')}}></script>
+		<script src={{url_for('static', filename ='resources/newindex/js/particles.min.js')}}></script>
+		<script src={{url_for('static', filename ='resources/newindex/js/particle-code.js')}}></script>
+	</body>
+</html>
