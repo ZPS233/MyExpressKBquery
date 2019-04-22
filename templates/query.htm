@@ -44,7 +44,7 @@
 								<div id="main-form" class="form-inline col-md-12" role="form" style="color: white;">
 									<div class="form-group col-md-12 col-sm-12 col-xs-12" style="border:1px solid white; color: white;">
 										<label class="sr-only" for="mainentry"></label>
-										<input type="text" class="" id="mainentry" placeholder="杨浦区985高校" oninput="reset()" 
+										<input type="text" class="" id="mainentry" placeholder="" oninput="reset()" 
 												style="width: 100%;height:50px;background:rgba(0,0,0,0);outline: none;
 												-webkit-appearance:none;border-radius: 0;box-shadow:none;
 												border:0px none;color: withe;" 
@@ -76,8 +76,27 @@
 										</p>
 										<p class="intent">加载中，请稍候...</p>
 										<hr class="my-4">
-											<a class="target" href="#" role="button">请稍候...</a>
-									</div>
+										<!--当问题类型为1 即回答一句话 -->
+										<p class="target" role="button">请稍候...</a>
+										<!--当问题类型为2 -->
+										<div id= "response3"  class="panel panel-default">
+											<div class="panel-heading" data-toggle="collapse" data-parent="#accordion" data-target="#collapseInfoBox">
+												<h4 class="panel-title">
+													<span class="glyphicon glyphicon-search"></span> 实体信息
+												</h4>
+											</div>
+												<div id="collapseInfoBox" class="panel-collapse collapse in">
+													<div class="panel-body">
+														<div class="table-responsive">
+															<table class="table table-hover table-striped">
+																<tbody id="entityTbody">
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+    									</div>
 												
 									<div id="response2" style="display:none;" class="jumbotron response">
 										<p style="margin:0px 0 35px 0;">
@@ -88,17 +107,17 @@
 										</p>
 										<div class="row">
 											<div class="eg col-md-12">
-												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">??</div>
-												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">??</div>
+												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">实体</div>
+												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">问题</div>
 												<div class="intent col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">??</div>
 											</div>
 											<hr class="my-4 ">
 											<div class="eg col-md-12">
 												<div class=" col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">
-													<a class="target" href="#" style="padding: 0;margin: 0;">圆通快递</a>
+													<a class="target" href="#" style="padding: 0;margin: 0;">圆通速递</a>
 												</div>
 												<div class=" col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">
-													<a class="target" href="#" style="padding: 0;margin: 0;">?</a>
+													<a class="target" href="#" style="padding: 0;margin: 0;">圆通速递的董事长是谁?</a>
 												</div>
 												<div class=" col-md-4 col-sm-4 col-xs-4 text-left" style="padding: 0;">
 													<a class="target" href="#" style="padding: 0;margin: 0;">?</a>
@@ -115,7 +134,7 @@
 										};
 														
 										setInterval(function () {
-											let exams = ['顺丰', '圆通'];
+											let exams = ['顺丰速运', '圆通速递'];
 											let index = Math.floor(Math.random() * exams.length);
 											$('#mainentry').attr('placeholder', exams[index]);
 										}, 3000);
@@ -127,7 +146,6 @@
 											
 										function reset() {
 											$('#result').addClass('hidden');
-											$('#jumpsubmit').addClass('hidden');
 											$('#mainentrysubmit').removeClass('hidden');
 											$('.button span').removeClass('hidden');
 										}
@@ -135,7 +153,8 @@
 										function mainentry() {
 											$('#response').removeClass('hidden');
 											$('#response .intent').text('加载中，请稍候...');
-											$('#response .btn').text('请稍候...');
+											$('#response .target').addClass('hidden');
+											$('#response3').addClass('hidden')
 											$('#headline').slideUp('normal', function(){
 												$('#headline-small').fadeIn();
 											});
@@ -151,11 +170,49 @@
 												contentType: "application/json",
 												success: function (responseText, status) {
 													if (status === "success") {
-														
-														
-													
-														
-														$('#response .intent').text(responseText);
+    													console.log(responseText)
+    													var obj = JSON.parse(responseText);											
+        												console.log(obj.answer)        												
+    													if (obj.type === 2){
+        													$('#response .intent').text('多条数据 或多属性');
+            												$('#response3').removeClass('hidden')
+            												$('#response .target').addClass('hidden');
+            												$('#entityTbody').empty()
+            												var heads = obj.head
+            												console.log(heads)
+            												for (aindex in obj.answer){
+                												str = "<tr>"
+                												var dict = JSON.parse(obj.answer[aindex])
+                												console.log(dict)
+                												for(hindex in heads){
+                    												head = heads[hindex]
+                    												console.log(dict[head])
+                    												
+                    												if (head === "object") {
+                        												str = str + "<td class=\"col-xs-8\">" + dict[head] +"</td>"
+                        											}
+                        											else
+                        											{
+                            											str = str + "<td class=\"col-xs-4\">" + dict[head] +"</td>"
+                        											}
+                    											}	
+                												str += "</tr>"
+                    											$('#entityTbody').append(str);
+            												}
+        												}
+    													if (obj.type === 1){
+        													$('#response .intent').text('单属性查询');
+        													$('#response .target').text(obj.answer);
+            												$('#response3').addClass('hidden');
+            												$('#response .target').removeClass('hidden');
+        												}
+        												if (obj.type === 0){
+        													$('#response .intent').text('无法理解问句');
+        													$('#response .target').text(obj.answer);
+            												$('#response3').addClass('hidden');
+            												$('#response .target').removeClass('hidden');
+        												}
+    													
 													}
 												}
 											});

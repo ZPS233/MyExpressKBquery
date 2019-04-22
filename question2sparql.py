@@ -19,11 +19,12 @@ class Question2Sparql:
         #将分好的word对象作为sentence传入
         for rule in self.rules:
             query, num = rule.apply(word_objects)
+            print(query,num)
 #            print(query,num)
             if query is not None:
                 queries_dict[num] = query
         
-#        print('词典:',queries_dict)
+        print('词典:',queries_dict)
                 
                 
         if len(queries_dict) == 0:
@@ -31,6 +32,6 @@ class Question2Sparql:
         elif len(queries_dict) == 1:
             return list(queries_dict.values())[0]
         else:
-            #匹配多个语句，以匹配关键词最多的句子作为返回结果
+            #以匹配关键词最多的句子作为返回结果
             sorted_dict = sorted(queries_dict.items(), key=lambda item: item[0], reverse=True)
             return sorted_dict[0][1]

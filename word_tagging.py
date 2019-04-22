@@ -15,6 +15,8 @@ class Tagger:
     def __init__(self, dict_paths):
         for p in dict_paths:
             jieba.load_userdict(p)
+        jieba.suggest_freq(('服务','类型'), True)
+#        jieba.suggest_freq(('时效','件'), True)
         #jieba.suggest_freq(('', ''), True)
 
     @staticmethod
@@ -26,7 +28,6 @@ class Tagger:
 #测试
 if __name__ == '__main__':
     tagger = Tagger(['external_dict/company.txt'])
-    while True:
-        s = input()
-        for i in tagger.get_word_objects(s):
-            print (i.token, i.pos)
+    s = input()
+    for i in tagger.get_word_objects(s):
+        print (i.token, i.pos)

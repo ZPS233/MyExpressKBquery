@@ -2,6 +2,7 @@
 
 from refo import finditer, Predicate, Star, Any, Disjunction
 import re 
+import word_tagging
 
 class W(Predicate):
     def __init__(self, token=".*", pos=".*"):
@@ -13,8 +14,13 @@ class W(Predicate):
     def match(self, word):
         m1 = self.token.match(word.token)
         m2 = self.pos.match(word.pos)
+        print('dddddddd',m1,m2)
         return m1 and m2
 pos_number = "m"
-number_entity = (W(pos=pos_number))
+number_entity = W(pos=pos_number)
 
-adventure = W("冒险")
+adventure = W("s")|number_entity
+a = ['1','2','3']
+for l in a:
+    adventure = adventure|W(l)
+print(adventure)

@@ -1,32 +1,6 @@
 # encoding=utf-8
 
-"""
-实体检索
-圆通公司/人/某服务 的介绍/是什么/是干什么的   把全部属性提取出来
-
-按实体检索属性
-圆通提供哪些类型的服务/圆通的服务有哪些
-圆通的保价服务/禁运物品/电话
-
-按多属性检索实体
-提供次日达和冷链服务的公司?
-
-多跳查询
-圆通冷链的配送能力?
-
-1. 某演员演了什么电影
-2. 某电影有哪些演员出演
-3. 演员A和演员B合作出演了哪些电影
-4. 某演员参演的评分大于X的电影有哪些
-5. 某演员出演过哪些类型的电影
-6. 某演员出演的XX类型电影有哪些。
-7. 某演员出演了多少部电影。
-8. 某演员是喜剧演员吗。
-9. 某演员的生日/出生地/英文名/简介
-10. 某电影的简介/上映日期/评分
-
-"""
-from refo import finditer, Predicate, Star, Any, Disjunction
+from refo import finditer, Predicate, Star, Any
 import re
 
 #SPARQL前缀和模板
@@ -52,7 +26,6 @@ SPARQL_ASK_TEM = "{prefix}\n" + \
              "{expression}\n" + \
              "}}\n"
 
-
 class W(Predicate):
     def __init__(self, token=".*", pos=".*"):
         self.token = re.compile(token + "$")
@@ -75,12 +48,9 @@ class Rule(object):
     def apply(self, sentence):
         matches = []
         #拿着分好的词(整个输入的句子)   去跟 规则进行匹配    只留下匹配到的词(中间可能包含其他杂项)   
-        #如果一个句子中包含多个符合规则的短句,则返回多个
+        #如果一个句子中包含多个符合规则的短句,则将多个子句返回给action函数 但是只处理第一个子句
         for m in finditer(self.condition, sentence):
             i, j = m.span()
-            print('ij:',i,j,sentence[i:j])
-            for s in sentence[i:j]:
-                print('sss',s)
             matches.extend([sentence[i:j]])
         return self.action(matches), self.condition_num
 
@@ -89,111 +59,158 @@ class QuestionSet:
         pass
 
     @staticmethod
-    def has_company_basicinfo_question(word_object_list):
+    def has_company_basicinfo_question(clauses):
+        print('\n与企业属性规则匹配')
         #公司属性
         select = "?x"
         sparql = None
-        for wlist in word_object_list:
-            print('问题子句:')
+        for i,clause in enumerate(clauses):
+            print('问题子句',i,':')
             keyword = None
-            for index,w in enumerate(list_company_basic):
-#                for m in finditer(w,wlist).).span()
-                print('oooooo','ss',index)
+            matches = []
+            for index,cbW in enumerate(listW_company_basic):
+                for m in finditer(cbW, clause):
+                    i, j = m.span()
+                    matches.extend(clause[i:j])
+                    if len(matches) != 0:
+                        keyword = keyWord_company_baisc[index]
                 if keyword is not None:
                     break
-            
-            
-            for w in wlist:
-                print(w)
-        
-        
-        for w in word_object_list[0]:
-        
-            if w.pos == pos_company:
-                e = "?s vocab:company_chName '{company_name}'."\
-                    "?s vocab:{keyword} ?x.".format(company_name=w.token, keyword=keyword)
 
+            for w in clause:
+                if w.pos == pos_company:
+                    if keyword == 'company_description':
+#                        select = "?x ?y"
+#                        e = "?s vocab:company_chName '{company_name}'."\
+#                            "?s vocab:company_baidubaikeDescription ?x."\
+#                            "?s vocab:company_kuaidi100Description ?y.".format(company_name=w.token)
+                        select = "?y"
+                        e = "?s vocab:company_chName '{company_name}'."\
+                            "?s vocab:company_kuaidi100Description ?y.".format(company_name=w.token)
+                    else:
+                        e = "?s vocab:company_chName '{company_name}'."\
+                            "?s vocab:{keyword} ?x.".format(company_name=w.token, keyword=keyword)
+                    sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
+                    break
+        return sparql
+        
+    @staticmethod
+    def has_companyOrPerson_all_basicinfo_question(clauses):
+        #人/公司 全部属性
+        print('\n与企业的全部属性规则匹配')
+        select = "?subject ?predicatelabel ?object"
+        sparql = None
+        for i,clause in enumerate(clauses):
+            print('问题子句',i,':')
+            for w in clause:
+                if w.pos == pos_company :
+                    e = "?s vocab:company_chName '{company_name}'."\
+                        "?s ?predicate ?object."\
+                        "?s rdfs:label ?subject."\
+                        "?predicate rdfs:label ?predicatelabel".format(company_name=w.token)                
+                elif w.pos == pos_person:
+                    e = "?subject vocab:person_chName '{person_name}'."\
+                        "?subject ?predicate ?object."\
+                        "?predicate rdfs:label ?predicatelabel".format(person_name=w.token)
                 sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
-
                 break
-            
-        return sparql
-
+            return sparql
 
     @staticmethod
-    def has_movie_question(word_objects):
-        """
-        某演员演了什么电影
-        """
-        select = "?x"
-
+    def has_servicetype_question(clauses):
+        #企业 服务类型
+        print('\n与企业服务类型规则匹配')
+        select = "?servicetype"
         sparql = None
-        for w in word_objects:
-            print('service',w)
-            if w.pos == pos_person:
-                e = "?s :personName '{person}'." \
-                    "?s :hasActedIn ?m." \
-                    "?m :movieTitle ?x".format(person=w.token)
-
-                sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX,
-                                                  select=select,
-                                                  expression=e)
-                break
+        for i,clause in enumerate(clauses):
+            print('问题子句',i,':')
+            for w in clause:
+                if w.pos == pos_company:
+                    e = "?s vocab:company_chName '{company_name}'."\
+                            "?s vocab:hasServiceType ?st."\
+                            "?st rdfs:label ?servicetype.".format(company_name=w.token)
+                    sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
+                    break
         return sparql
 
     @staticmethod
-    def has_actor_question(word_objects):
-        """
-        哪些演员参演了某电影
-        :param word_objects:
-        :return:
-        """
-        select = u"?x"
-
+    def has_specific_servicetype_question(clauses):
+        #具体类型 的 服务service
+        print('\n与企业具体服务类型规则匹配')
+        select = "?ss"
         sparql = None
-        for w in word_objects:
-            if w.pos == pos_movie:
-                e = u"?m :movieTitle '{movie}'." \
-                    u"?m :hasActor ?a." \
-                    u"?a :personName ?x".format(movie=w.token)
-
-                sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX,
-                                                  select=select,
-                                                  expression=e)
-                break
-
+        matches = []
+        keyword = None
+        for i,clause in enumerate(clauses):
+            print('问题子句',i,':')
+            for index,stW in enumerate(listW_servicetype):
+                for m in finditer(stW, clause):
+                    i, j = m.span()
+                    matches.extend(clause[i:j])
+                    if len(matches) != 0:
+                        keyword = keywords_servicetype[index]
+                if keyword is not None:
+                    break
+            print(keyword)
+            for w in clause:
+                if w.pos == pos_company:
+                    e = "?s vocab:company_chName '{company_name}'."\
+                            "?s vocab:hasServiceType ?st."\
+                            "?st vocab:servicetype_name '{servicetype_name}'."\
+                            "?st vocab:hasService ?service."\
+                            "?service vocab:service_name ?ss".format(company_name=w.token,servicetype_name=w.token+'-'+keyword)
+                    sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
+                    break
+        return sparql
+    
+    @staticmethod
+    def has_service_question(clauses):
+        #企业 服务
+        print('\n与企业服务规则匹配')
+        select = "?ss"
+        sparql = None
+        for i,clause in enumerate(clauses):
+            print('问题子句',i,':')
+            for w in clause:
+                if w.pos == pos_company:
+                    e = "?s vocab:company_chName '{company_name}'."\
+                        "?s vocab:hasServiceType ?st."\
+                        "?st vocab:hasService ?service."\
+                        "?service vocab:service_name ?ss".format(company_name=w.token)
+                    sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
+                    break
         return sparql
 
     @staticmethod
-    def has_cooperation_question(word_objects):
-        """
-        演员A和演员B有哪些合作的电影
-        :param word_objects:
-        :return:
-        """
-        select = u"?x"
-
-        person1 = None
-        person2 = None
-
-        for w in word_objects:
-            if w.pos == pos_person:
-                if person1 is None:
-                    person1 = w.token
-                else:
-                    person2 = w.token
-        if person1 is not None and person2 is not None:
-            e = u"?p1 :personName '{person1}'." \
-                u"?p2 :personName '{person2}'." \
-                u"?p1 :hasActedIn ?m." \
-                u"?p2 :hasActedIn ?m." \
-                u"?m :movieTitle ?x".format(person1=person1, person2=person2)
-
-            return SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX,
-                                          select=select,
-                                          expression=e)
-        else:
-            return None
+    def has_specific_service_question(clauses):
+        #具体类型 的 服务service
+        print('\n与企业具体服务规则匹配')
+        select = "?siname ?sidesc"
+        sparql = None
+        matches = []
+        keyword = None
+        for i,clause in enumerate(clauses):
+            print('问题子句',i,':')
+            for index,sW in enumerate(listW_service):
+                for m in finditer(sW, clause):
+                    i, j = m.span()
+                    matches.extend(clause[i:j])
+                    if len(matches) != 0:
+                        keyword = keywords_service[index]
+                if keyword is not None:
+                    break
+            for w in clause:
+                if w.pos == pos_company:
+                    e = "?s vocab:company_chName '{company_name}'."\
+                            "?s vocab:hasServiceType ?st."\
+                            "?st vocab:hasService ?service."\
+                            "?service vocab:service_name '{service_name}'."\
+                            "?service vocab:hasServiceItem ?si."\
+                            "?si vocab:serviceitem_name ?siname."\
+                            "?si vocab:serviceitem_description ?sidesc".format(company_name=w.token,service_name=w.token+'-'+keyword)
+                    sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
+                    break
+        return sparql
 
     @staticmethod
     def has_compare_question(word_objects):
@@ -235,79 +252,6 @@ class QuestionSet:
         else:
             return None
 
-    @staticmethod
-    def has_movie_type_question(word_objects):
-        """
-        某演员演了哪些类型的电影
-        :param word_objects:
-        :return:
-        """
-        select = u"?x"
-
-        sparql = None
-        for w in word_objects:
-            if w.pos == pos_person:
-                e = u"?s :personName '{person}'." \
-                    u"?s :hasActedIn ?m." \
-                    u"?m :hasGenre ?g." \
-                    u"?g :genreName ?x".format(person=w.token)
-
-                sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX,
-                                                  select=select,
-                                                  expression=e)
-                break
-        return sparql
-
-    @staticmethod
-    def has_specific_type_movie_question(word_objects):
-        """
-        某演员演了什么类型（指定类型，喜剧、恐怖等）的电影
-        :param word_objects:
-        :return:
-        """
-        select = u"?x"
-
-        keyword = None
-#        for r in genre_keyword_rules:
-#            keyword = r.apply(word_objects)
-#
-#            if keyword is not None:
-#                break
-
-        sparql = None
-        for w in word_objects:
-            if w.pos == pos_person:
-                e = u"?s :personName '{person}'." \
-                    u"?s :hasActedIn ?m." \
-                    u"?m :hasGenre ?g." \
-                    u"?g :genreName '{keyword}'." \
-                    u"?m :movieTitle ?x".format(person=w.token, keyword=keyword)
-
-                sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX,
-                                                  select=select,
-                                                  expression=e)
-                break
-        return sparql
-
-    @staticmethod
-    def has_quantity_question(word_objects):
-        """
-        某演员演了多少部电影
-        :param word_objects:
-        :return:
-        """
-        select = u"?x"
-
-        sparql = None
-        for w in word_objects:
-            if w.pos == pos_person:
-                e = u"?s :personName '{person}'." \
-                    u"?s :hasActedIn ?x.".format(person=w.token)
-
-                sparql = SPARQL_COUNT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
-                break
-
-        return sparql
 
     @staticmethod
     def is_comedian_question(word_objects):
@@ -327,219 +271,56 @@ class QuestionSet:
 
         return sparql
 
-    @staticmethod
-    def has_basic_person_info_question(word_objects):
-        """
-        某演员的基本信息是什么
-        :param word_objects:
-        :return:
-        """
 
-        keyword = None
-#        for r in person_basic_keyword_rules:
-#            keyword = r.apply(word_objects)
-#            if keyword is not None:
-#                break
+#字符串列表 keyword用于sql
+keywords_service = []
+listW_service= []
+with open('external_dict/service.txt','r',encoding = 'utf-8') as f:
+    lines = f.readlines()
+    for line in lines:
+        print(line)
+        keywords_service.append(line.split(' ')[0])
 
-        select = u"?x"
-        sparql = None
-        for w in word_objects:
-            if w.pos == pos_person:
-                e = u"?s :personName '{person}'." \
-                    u"?s {keyword} ?x.".format(person=w.token, keyword=keyword)
-
-                sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
-
-                break
-
-        return sparql
-
-    @staticmethod
-    def has_basic_movie_info_question(word_objects):
-        """
-        某电影的基本信息是什么
-        :param word_objects:
-        :return:
-        """
-
-        keyword = None
-#        for r in movie_basic_keyword_rules:
-#            keyword = r.apply(word_objects)
-#            if keyword is not None:
-#                break
-
-        select = u"?x"
-        sparql = None
-        for w in word_objects:
-            if w.pos == pos_movie:
-                e = u"?s :movieTitle '{movie}'." \
-                    u"?s {keyword} ?x.".format(movie=w.token, keyword=keyword)
-
-                sparql = SPARQL_SELECT_TEM.format(prefix=SPARQL_PREXIX, select=select, expression=e)
-
-                break
-
-        return sparql
+#用于问题匹配
+words_service = W(keywords_service[0])
+#用于匹配到后 找到是哪一个serviceType
+listW_service.append(W(keywords_service[0]))
+for st in keywords_service[1:]:
+    words_service = words_service|W(st)
+    listW_service.append(W(st))     
 
 
-class PropertyValueSet:
-    def __init__(self):
-        pass
-    @staticmethod
-    def return_company_english_name():
-        return 'company_enName'
-    @staticmethod
-    def return_adventure_value():
-        return u'冒险'
+#字符串列表 keyword用于sql
+keywords_servicetype = []
+listW_servicetype= []
+with open('external_dict/servicetype.txt','r',encoding = 'utf-8') as f:
+    lines = f.readlines()
+    for line in lines:
+        print(line)
+        keywords_servicetype.append(line.split(' ')[0])
 
-    @staticmethod
-    def return_fantasy_value():
-        return u'奇幻'
-
-    @staticmethod
-    def return_animation_value():
-        return u'动画'
-
-    @staticmethod
-    def return_drama_value():
-        return u'剧情'
-
-    @staticmethod
-    def return_thriller_value():
-        return u'恐怖'
-
-    @staticmethod
-    def return_action_value():
-        return u'动作'
-
-    @staticmethod
-    def return_comedy_value():
-        return u'喜剧'
-
-    @staticmethod
-    def return_history_value():
-        return u'历史'
-
-    @staticmethod
-    def return_western_value():
-        return u'西部'
-
-    @staticmethod
-    def return_horror_value():
-        return u'惊悚'
-
-    @staticmethod
-    def return_crime_value():
-        return u'犯罪'
-
-    @staticmethod
-    def return_documentary_value():
-        return u'纪录'
-
-    @staticmethod
-    def return_fiction_value():
-        return u'科幻'
-
-    @staticmethod
-    def return_mystery_value():
-        return u'悬疑'
-
-    @staticmethod
-    def return_music_value():
-        return u'音乐'
-
-    @staticmethod
-    def return_romance_value():
-        return u'爱情'
-
-    @staticmethod
-    def return_family_value():
-        return u'家庭'
-
-    @staticmethod
-    def return_war_value():
-        return u'战争'
-
-    @staticmethod
-    def return_tv_value():
-        return u'电视电影'
-
-    @staticmethod
-    def return_higher_value():
-        return u'>'
-
-    @staticmethod
-    def return_lower_value():
-        return u'<'
-
-    @staticmethod
-    def return_birth_value():
-        return u':personBirthDay'
-
-    @staticmethod
-    def return_birth_place_value():
-        return u':personBirthPlace'
-
-    @staticmethod
-    def return_english_name_value():
-        return u':personEnglishName'
-
-    @staticmethod
-    def return_person_introduction_value():
-        return u':personBiography'
-
-    @staticmethod
-    def return_movie_introduction_value():
-        return u':movieIntroduction'
-
-    @staticmethod
-    def return_release_value():
-        return u':movieReleaseDate'
-
-    @staticmethod
-    def return_rating_value():
-        return u':movieRating'
-
+#用于问题匹配
+words_servicetype = W(keywords_servicetype[0])
+#用于匹配到后 找到是哪一个serviceType
+listW_servicetype.append(W(keywords_servicetype[0]))
+for st in keywords_servicetype[1:]:
+    words_servicetype = words_servicetype|W(st)
+    listW_servicetype.append(W(st))         
 
 # TODO 定义关键词
 pos_company = 'nt'
 pos_person = "nr"
-pos_movie = "nz"
+pos_service = "nz"
+pos_servicetype = 'nz'
 pos_number = "m"
 
+company_servicetype =  (W(pos = pos_servicetype))
+company_service =  (W(pos = pos_service))
 company_entity = (W(pos = pos_company))
 person_entity = (W(pos=pos_person))
-movie_entity = (W(pos=pos_movie))
 number_entity = (W(pos=pos_number))
-#W("")
-
-adventure = W("冒险")
-fantasy = W("奇幻")
-animation = (W("动画") | W("动画片"))
-drama = (W("剧情") | W("剧情片"))
-thriller = (W("恐怖") | W("恐怖片"))
-action = (W("动作") | W("动作片"))
-comedy = (W("喜剧") | W("喜剧片"))
-history = (W("历史") | W("历史剧"))
-western = (W("西部") | W("西部片"))
-horror = (W("惊悚") | W("惊悚片"))
-crime = (W("犯罪") | W("犯罪片"))
-documentary = (W("纪录") | W("纪录片"))
-science_fiction = (W("科幻") | W("科幻片"))
-mystery = (W("悬疑") | W("悬疑片"))
-music = (W("音乐") | W("音乐片"))
-romance = (W("爱情") | W("爱情片"))
-family = W("家庭")
-war = (W("战争") | W("战争片"))
-TV = W("电视")
-genre = (adventure | fantasy | animation | drama | thriller | action
-         | comedy | history | western | horror | crime | documentary |
-         science_fiction | mystery | music | romance | family | war
-         | TV)
-
 
 english_name = (W("英文名") | W("英文") + W("名字"))
-
 
 actor = (W("演员") | W("艺人") | W("表演者"))
 movie = (W("电影") | W("影片") | W("片子") | W("片") | W("剧"))
@@ -560,46 +341,55 @@ rating = (W("评分") | W("分") | W("分数"))
 release = (W("上映"))
 movie_basic = (rating | introduction | release)
 
-
-
-company_introduction = (W("介绍") | W("简介"))
-company_businessScope = W("经营")+W("范围")
-company_type = W("类型")
+company_tel = W('电话')
+company_web = (W('官网')|W('网页'))
+company_description = (W("介绍") | W("简介"))
+company_businessScope = W("经营范围")
+word_service = W("服务")
+word_type = W("类型")
 company_slogan = W("口号")
 company_annualTurnover = W("年")+W("营业额")
 company_chairMan = W("董事长")
-list_company_basic = [english_name,company_introduction,company_businessScope,company_type,company_slogan,company_annualTurnover,company_chairMan]
-company_basic = (english_name|company_introduction|company_businessScope|company_type|company_slogan|company_annualTurnover|company_chairMan)
-headquarter_palce =  (W("总部") | W("总部")+W('地址'))
-incorporation_time= (W("成立")|W("创办"))+(W("日期")|W("时间"))
+incorporate = (W("成立")|W("创办"))
+headquarter =  (W("总部") | W("总部")+W('地址'))
+incorporation_time= incorporate + (W("日期")|W("时间"))
+company_basic = (incorporation_time|headquarter|english_name|company_description|company_businessScope|word_type|company_slogan|company_annualTurnover|company_chairMan)
+
 when = (W("何时") | W("时候"))
 where = (W("哪里") | W("哪儿") | W("何地") | W("何处") | W("在") + W("哪"))
+
+
+listW_company_basic = [company_tel,company_web,incorporation_time,headquarter,english_name,company_description,company_businessScope,word_type,company_slogan,company_annualTurnover,company_chairMan]
+keyWord_company_baisc = ['company_tel','company_website','company_incorporationTime','company_headquarter','company_enName','company_description','company_businessScope','company_type','company_slogan','company_annualTurnover','company_chairMan']
+
 # TODO 问题模板/匹配规则
 """
-1. 某演员演了什么电影
-2. 某电影有哪些演员出演
-3. 演员A和演员B合作出演了哪些电影
-4. 某演员参演的评分大于X的电影有哪些
-5. 某演员出演过哪些类型的电影
-6. 某演员出演的XX类型电影有哪些。
+1.某company的英文名 经营范围 公司类型 公司口号 年营业额 董事长 成立时间 总部地址 电话 网站
+2.某company的成立时间[什么时候/何时成立?]
+3.某person/company
+4.某company提供/有  哪些类型的服务/服务的类型
+5.某company 有哪些 XX 类型 的 服务 (有哪些)
+6.某company提供/有  哪些服务
+7.某company XX 服务
+
+
 7. 某演员出演了多少部电影。
 8. 某演员是喜剧演员吗。
-9. 某演员的生日/出生地/英文名/简介
-10. 某电影的简介/上映日期/评分
-11.XX的英文名 总部 成立时间when incorporate 经营范围 公司类型 公司口号 年营业额 董事长 简介
 """
 rules = [
     Rule(condition_num=2, condition=company_entity + Star(Any(), greedy=False) + company_basic + Star(Any(), greedy=False), action = QuestionSet.has_company_basicinfo_question ),
-        
-        
-    Rule(condition_num=2, condition=person_entity + Star(Any(), greedy=False) + movie + Star(Any(), greedy=False), action=QuestionSet.has_movie_question),
-    Rule(condition_num=2, condition=(movie_entity + Star(Any(), greedy=False) + actor + Star(Any(), greedy=False)) | (actor + Star(Any(), greedy=False) + movie_entity + Star(Any(), greedy=False)), action=QuestionSet.has_actor_question),
-    Rule(condition_num=3, condition=person_entity + Star(Any(), greedy=False) + person_entity + Star(Any(), greedy=False) + (movie | Star(Any(), greedy=False)), action=QuestionSet.has_cooperation_question),
+    Rule(condition_num=2, condition=company_entity + Star(Any(), greedy=False) + when + incorporate + Star(Any(), greedy=False),action=QuestionSet.has_company_basicinfo_question),
+    
+    Rule(condition_num=1, condition=Star(Any(), greedy=False) + (company_entity|person_entity) + Star(Any(), greedy=False), action = QuestionSet.has_companyOrPerson_all_basicinfo_question ),
+    #4
+    Rule(condition_num=3, condition=company_entity + Star(Any(), greedy=False) + (word_type+Star(Any(), greedy=False)+word_service|word_service+Star(Any(), greedy=False)+word_type), action = QuestionSet.has_servicetype_question),
+    #5
+    Rule(condition_num=4, condition=company_entity + Star(Any(), greedy=False) + words_servicetype + word_type + Star(Any(), greedy=False) + word_service, action = QuestionSet.has_specific_servicetype_question),
+    #6
+    Rule(condition_num=2, condition=company_entity + Star(Any(), greedy=False) + word_service, action = QuestionSet.has_service_question),
+    #7
+    Rule(condition_num=3, condition=company_entity + Star(Any(), greedy=False) + words_service + word_service, action = QuestionSet.has_specific_service_question),
+    
+    
     Rule(condition_num=4, condition=person_entity + Star(Any(), greedy=False) + compare + number_entity + Star(Any(), greedy=False) + movie + Star(Any(), greedy=False), action=QuestionSet.has_compare_question),
-    Rule(condition_num=3, condition=person_entity + Star(Any(), greedy=False) + category + Star(Any(), greedy=False) + movie, action=QuestionSet.has_movie_type_question),
-    Rule(condition_num=3, condition=person_entity + Star(Any(), greedy=False) + genre + Star(Any(), greedy=False) + (movie | Star(Any(), greedy=False)), action=QuestionSet.has_specific_type_movie_question),
-    Rule(condition_num=3, condition=person_entity + Star(Any(), greedy=False) + several + Star(Any(), greedy=False) + (movie | Star(Any(), greedy=False)), action=QuestionSet.has_quantity_question),
-    Rule(condition_num=3, condition=person_entity + Star(Any(), greedy=False) + comedy + actor + Star(Any(), greedy=False), action=QuestionSet.is_comedian_question),
-    Rule(condition_num=3, condition=(person_entity + Star(Any(), greedy=False) + (when | where) + person_basic + Star(Any(), greedy=False)) | (person_entity + Star(Any(), greedy=False) + person_basic + Star(Any(), greedy=False)), action=QuestionSet.has_basic_person_info_question),
-    Rule(condition_num=2, condition=movie_entity + Star(Any(), greedy=False) + movie_basic + Star(Any(), greedy=False), action=QuestionSet.has_basic_movie_info_question)
 ]
